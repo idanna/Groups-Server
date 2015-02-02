@@ -29,16 +29,21 @@
 	<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
 	<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
 	  <script>
+        // functions //
+        function sendMessage(message, parentId) {
+          var msgId = 'msg_id_' + Math.floor((1 + Math.random()) * 0x10000);
+          var userMsg = {name: user.name, msg: {id: msgId, content: $('#m').val(), parent: parentId}};
+          socket.emit('chat message', userMsg);
+        }
+
+        // end functions //
         $('#users').append($('<li>').text('Connected Users:'));
 
         var user = {name: "User " + Math.floor((1 + Math.random()) * 0x10000), uuid: ""};
 	    var socket = io();
         socket.emit('join', user);
-
-	    $('form').submit(function(){
-            var msgId = 'msg_id_' + Math.floor((1 + Math.random()) * 0x10000);
-            var userMsg = {name: user.name, msg: {id: msgId, content: $('#m').val(), parent: ''}};
-	        socket.emit('chat message', userMsg);
+        $('#message_form').submit(function(){
+            sendMessage($('#m'), '');
 	        $('#m').val('');
 	        return false;
 	    });
@@ -47,24 +52,25 @@
         //          user.uuid = userDetails.id;
         //        });
         socket.on('chat message', function(userMsg){
-            var msgParent = userMsg.msg.parent;
+            var pid = userMsg.msg.parent;
             var msgId = userMsg.msg.id;
 
             //Gen new reply form
             $replyForm = $('<form>').attr('class', "reply_form");
             $replyForm.append($('<input>').attr('id', "r").attr('autocomplete', "off"));
             $replyForm.append($('<button>').text('Reply'));
+            $replyForm.attr('pid', pid);
             $replyForm.attr('id', msgId)
             $replyForm.submit(function(){
-                var parentId = this.id;
-                console.log("replied on " + parentId);
+                sendMessage("something", msgId);
+                return false;
             });
 
-            var msgItem = $('<li>').attr('id', msgId).text(userMsg.name + ": " + userMsg.msg.content).append($replyForm);
-            if (msgParent == '') {
-                $('#messages').append($('<li>')).append($('<ul>')).append(msgItem);
+            var msgItem = $('<li>').append($('<ul>').attr('id', msgId).text(userMsg.name + ": " + userMsg.msg.content).append($replyForm));
+            if (pid == '') {
+                $('#messages').append(msgItem);
             } else {
-                $('#' + msgParent).append(msgItem);
+                $('#' + pid).append($('<li>').attr('id', msgId).text(userMsg.name + ": " + userMsg.msg.content).append($replyForm));
             }
 	    });
         socket.on('user connected', function(username){
