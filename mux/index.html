@@ -30,10 +30,10 @@
 	<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
 	  <script>
         // functions //
-        function sendMessage(message, parentId) {
+        function sendMessage(type, message, parentId) {
           var msgId = 'msg_id_' + Math.floor((1 + Math.random()) * 0x10000);
-          var userMsg = {name: user.name, msg: {id: msgId, content: $('#m').val(), parent: parentId}};
-          socket.emit('chat message', userMsg);
+          var userMsg = {name: user.name, msg: {id: msgId, content: message, parent: parentId}};
+          socket.emit(type, userMsg);
         }
 
         // end functions //
@@ -43,7 +43,7 @@
 	    var socket = io();
         socket.emit('join', user);
         $('#message_form').submit(function(){
-            sendMessage($('#m'), '');
+            sendMessage('chat message', $('#m').val(), '');
 	        $('#m').val('');
 	        return false;
 	    });
@@ -57,22 +57,24 @@
 
             //Gen new reply form
             $replyForm = $('<form>').attr('class', "reply_form");
-            $replyForm.append($('<input>').attr('id', "r").attr('autocomplete', "off"));
+            $replyForm.append($('<input>').attr('id', "r_" + msgId).attr('autocomplete', "off"));
             $replyForm.append($('<button>').text('Reply'));
             $replyForm.attr('pid', pid);
             $replyForm.attr('id', msgId)
             $replyForm.submit(function(){
-                sendMessage("something", msgId);
+                sendMessage('reply', $('#r_' + msgId).val(), msgId);
                 return false;
             });
 
             var msgItem = $('<li>').append($('<ul>').attr('id', msgId).text(userMsg.name + ": " + userMsg.msg.content).append($replyForm));
-            if (pid == '') {
-                $('#messages').append(msgItem);
-            } else {
-                $('#' + pid).append($('<li>').attr('id', msgId).text(userMsg.name + ": " + userMsg.msg.content).append($replyForm));
-            }
+            $('#messages').append(msgItem);
 	    });
+
+        socket.on('reply', function(reply) {
+            $('#' + reply.msg.parent).append($('<li>').attr('id', reply.msg.id).text(reply.name + ": " + reply.msg.content));
+            $('#r_' + reply.msg.parent).val('');
+        });
+
         socket.on('user connected', function(username){
             $('#users').append($('<li>').text(username));
         });
